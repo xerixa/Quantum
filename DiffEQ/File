@@ -1,0 +1,47 @@
+function integrate(problem::MyODEProblem, solver::AbstractODESolver;dt)
+    t0, tf = problem.tspan
+    @assert tf > t0 "Final time must be greater than start time"
+    @assert dt > 0 "Time step must be positive"
+    nsteps = Int(ceil((tf-t0)/dt)) #if the div isnt perfect you still a small step to fill the gap
+    times = range(t0, tf, length=nsteps + 1) 
+    states = [
+        similar(problem.u0)
+        for _ in eachindex(times)
+    ]
+    states[1] .= problem.u0
+    # TODO: initialize states[1]
+    for n in 1:nsteps
+        # TODO: call step!
+        step!(solver, problem.f!, states[n+1], states[n], problem.p, times[n], dt)
+        #next state = current + (roc *dt)
+        #next state = current +(ODE*dt)
+        #solver , f, u, t, dt, p(physical constants of the system)
+    end
+    return ODESolution(times, states)
+end
+function step!(
+    ::RungeKutta4,
+    f!,
+    xnext,
+    x,
+    p,
+    t,
+    dt,
+)
+
+    k1 = similar(x)
+    k2 = similar(x)
+    k3 = similar(x)
+    k4 = similar(x)
+    temporary = similar(x) 
+    f!(temporary, x, p, t) 
+    k1 .= temporary
+    f!(temporary, x .+ 0.5 .* dt .* k1, p, t + 0.5 * dt)
+    k2 .= temporary
+    f!(temporary, x .+ 0.5 .* dt .* k2, p, t + 0.5 * dt)
+    k3 .= temporary
+    f!(temporary, x .+ dt .* k3, p, t + dt)
+    k4 .= temporary
+    xnext .= x .+ (dt/6) .* (k1 .+ 2 .* k2 .+ 2 .* k3 .+ k4)
+    return xnext
+end
